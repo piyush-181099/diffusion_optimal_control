@@ -1,7 +1,7 @@
 import os, sys
 
-data_root = '/data/inverse/'
-model_root = '/data/inverse/models/'
+data_root = './data/'
+model_root = './models/'
 
 import argparse
 import time

@@ -9,22 +9,15 @@ To run the code, please read the following instructions.
 ### 1) Clone the repository
 
 ```
-git clone https://github.com/DPS2022/diffusion-posterior-sampling
+git clone [https://github.com/DPS2022/diffusion-posterior-sampling](https://github.com/lihenryhfl/diffusion_optimal_control)
 
-cd diffusion-posterior-sampling
+cd diffusion_optimal_control
 ```
 
 <br />
 
-### 2) Download pretrained checkpoint
+### 2) Download pretrained checkpoint from DPS
 From the [link](https://drive.google.com/drive/folders/1jElnRoFv7b31fG0v6pTSQkelbSX3xGZh?usp=sharing), download the checkpoint "ffhq_10m.pt" and paste it to ./models/
-```
-mkdir models
-mv {DOWNLOAD_DIR}/ffqh_10m.pt ./models/
-```
-{DOWNLOAD_DIR} is the directory that you downloaded checkpoint to.
-
-:speaker: Checkpoint for imagenet is uploaded.
 
 <br />
 
@@ -42,7 +35,7 @@ pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --e
 
 <br />
 
-### 4) Inference
+### 3) Inference
 
 ```
 python3 inverse_sampling.py \

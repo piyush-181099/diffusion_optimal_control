@@ -40,6 +40,7 @@ def create_model(
     use_fp16=False,
     use_new_attention_order=False,
     model_path='',
+    **kwargs,
 ):
     if channel_mult == "":
         if image_size == 512:

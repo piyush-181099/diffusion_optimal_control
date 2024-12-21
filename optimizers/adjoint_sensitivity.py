@@ -4,13 +4,12 @@ import time
 from optimizers.util import *
 
 class AdjointSensitivity:
-    def __init__(self, env, use_running_state_cost=True, lr=1e-3, print_every=10, scheduled_lr=False, seed=None):
+    def __init__(self, env, use_running_state_cost=True, lr=1e-3, print_every=10, seed=None):
         self.env = env
         self.use_running_state_cost = use_running_state_cost
         self.lr = lr
         self.print_every = print_every
         self.seed = seed
-        self.scheduled_lr = scheduled_lr
         
     def get_cost(self, states, actions):
         """
@@ -41,19 +40,19 @@ class AdjointSensitivity:
         if actions is None:
             actions = init_fn(size=action_shape, device=init_state.device)
             
-        actions = [action.requires_grad_() for action in actions.reshape(action_shape)]
+        actions = actions.reshape(action_shape).requires_grad_()
+        optim = torch.optim.Adam([actions], lr=self.lr)
         
-        ts = torch.linspace(1, 0, self.env.num_steps)[:-1]
-        stds = self.env.g(ts) ** 2 / self.env.num_steps
-        # stds = ts
-        param_groups = []
-        for action, std in zip(actions, stds):
-            lr = std.item() * self.lr if self.scheduled_lr else self.lr
-            param_groups.append({'params': action, 'lr': lr})
-
-        optim = torch.optim.AdamW(param_groups, lr=self.lr)
-                
-        final_states = []
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim)
+        
+        with torch.no_grad():
+            states = [init_state]
+            n_steps, n_batch, _ = actions.shape
+            for t, action in zip(self.env.timesteps, actions):
+                state = self.env.step(t, states[-1], action)
+                states.append(state)
+        
+        final_states = [state.reshape(-1, self.env.state_dim)]
         time0 = time.time()
         
         try:
@@ -61,26 +60,19 @@ class AdjointSensitivity:
                 if self.seed is not None:
                     torch.manual_seed(self.seed)
                 optim.zero_grad()
+                orig_actions = actions.clone()
                 running_cost, terminal_cost, final_state = self.iterate(init_state, actions)
-                final_states.append(final_state.cpu().detach())
+                final_states.append(final_state)
                 optim.step()
-                
+                # scheduler.step((running_cost + terminal_cost).sum())
+                # print("total time", time.time() - time0, ",time per iteration per sample", (time.time() - time0) / len(init_state) / (i + 1))
                 if (i + 1) % self.print_every == 0:
-                    print(f"iter: {i + 1}, norm: {np.sum([action.norm().item() for action in actions]):2.2e},",
+                    print(f"iter: {i + 1}, norm: {actions.norm().item():2.2e},",
                           f"cost: {(running_cost + terminal_cost).mean().item():2.4e}",
                           f"-- running: {running_cost.mean().item():2.2e} /",
                           f"terminal: {terminal_cost.mean().item():2.2e}, lr: {optim.param_groups[0]['lr']}")
         except KeyboardInterrupt as e:
             pass
-        
-        with torch.no_grad():
-            states = [init_state]
-            for t, action in zip(self.env.timesteps, actions):
-                state = self.env.step(t, states[-1], action)
-                states.append(state)
-            final_states.append(state.reshape(-1, self.env.state_dim).cpu().detach())
-            
-        actions = torch.stack(actions)
             
         return actions.squeeze(), final_states
 
@@ -88,6 +80,7 @@ class AdjointSensitivity:
         time0 = time.time()
         with torch.no_grad():
             states = [init_state]
+            n_steps, n_batch, _ = actions.shape
             for t, action in zip(self.env.timesteps, actions):
                 state = self.env.step(t, states[-1], action)
                 states.append(state)
@@ -96,12 +89,15 @@ class AdjointSensitivity:
             
             Vx_fn = torch.func.grad(lambda x: self.env.terminal_cost(x).sum())
             Vx = Vx_fn(state.reshape(-1, self.env.state_dim)).reshape(-1, self.env.state_dim)
+            
+            actions.grad = torch.zeros_like(actions)
                 
-            for t in range(self.env.num_steps - 2, -1, -1):
+            for t in range(n_steps - 1, -1, -1):
                 step_fn = lambda x, u: self.env.step(self.env.timesteps[t], x, u)
                 Vx, ju = torch.func.vjp(step_fn, states[t], actions[t])[1](Vx)
                 lu = self.env.j_cost(self.env.timesteps[t], states[t], actions[t])[1].reshape(-1, self.env.control_dim)
-                assert actions[t].grad is None
-                actions[t].grad = ju + lu
-                                
+                actions.grad[t] += ju + lu
+                
+        # print("iterate time per sample", (time.time() - time0) / len(init_state))
+
         return running_cost, terminal_cost, states[-1]

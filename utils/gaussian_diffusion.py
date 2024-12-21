@@ -9,8 +9,7 @@ from tqdm.auto import tqdm
 from .img_utils import clear_color
 from .posterior_mean_variance import get_mean_processor, get_var_processor
 
-T_CONST = 1000.0
-# T = 2500.0
+
 
 __SAMPLER__ = {}
 
@@ -237,7 +236,7 @@ class GaussianDiffusion:
 
     def _scale_timesteps(self, t):
         if self.rescale_timesteps:
-            return t.float() * (max(T_CONST, self.num_timesteps) / self.num_timesteps)
+            return t.float() * (1000.0 / self.num_timesteps)
         return t
 
 def space_timesteps(num_timesteps, section_counts):
@@ -359,7 +358,7 @@ class _WrappedModel:
         map_tensor = torch.tensor(self.timestep_map, device=ts.device, dtype=ts.dtype)
         new_ts = map_tensor[ts]
         if self.rescale_timesteps:
-            new_ts = new_ts.float() * (max(self.original_num_steps, T_CONST) / self.original_num_steps)
+            new_ts = new_ts.float() * (1000.0 / self.original_num_steps)
         return self.model(x, new_ts, **kwargs)
 
 
@@ -436,7 +435,7 @@ def get_named_beta_schedule(schedule_name, num_diffusion_timesteps):
     if schedule_name == "linear":
         # Linear schedule from Ho et al, extended to work for any number of
         # diffusion steps.
-        scale = max(T_CONST, num_diffusion_timesteps) / num_diffusion_timesteps
+        scale = 1000 / num_diffusion_timesteps
         beta_start = scale * 0.0001
         beta_end = scale * 0.02
         return np.linspace(

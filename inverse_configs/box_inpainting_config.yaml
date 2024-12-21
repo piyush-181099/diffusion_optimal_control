@@ -1,11 +1,9 @@
-conditioning:
-  method: ps
-  params:
-    scale: 0.5
+parameters:
+  weight_scale: 1e-6
+  lr: 5e-3
 
 data:
-  name: ffhq
-  root: ./data/samples/
+  root: data/samples/
 
 measurement:
   operator:
@@ -13,7 +11,6 @@ measurement:
   mask_opt:
     mask_type: box
     mask_len_range: !!python/tuple [128, 129]  # for box
-    # mask_prob_range: !!python/tuple [0.3, 0.7]  # for random
     image_size: 256
 
 

@@ -9,7 +9,7 @@ class Diffusion:
         weight_scale=1.,
         num_steps=100,
         mode='ddim',
-        control_type='pixel',
+        control_type='input',
         u_nominal=None,
         device='cpu',
         eps=1e-3,
@@ -29,12 +29,14 @@ class Diffusion:
         self.control_type = control_type
         self.mode = mode
         self.u_nominal = u_nominal
+        self.dt = 1 / num_steps
+        self.alphas = VPSDE().alphas
         if seed is not None:
             self.seed = seed
         else:
             self.seed = np.random.randint(1000)
 
-        if control_type == 'pixel' or control_type == 'pixel_after':
+        if control_type == 'input' or control_type == 'output':
             self.control_dim = self.ndims
         elif control_type == 'h':
             self.control_dim = np.prod(self.h_dim)
@@ -59,27 +61,33 @@ class Diffusion:
             t_idx = self.inv_timesteps(t)
             u_nominal = self.u_nominal[t_idx].reshape(-1, self.ndims)
             assert u.shape[1:] == u_nominal.shape[1:]
-            # print(f't: {t}, diff: {(u - u_nominal).norm()}')
             return u - u_nominal
 
         return u
 
+    def alpha(self, t):
+        t_int = (t * (len(self.alphas) - 1)).int()
+        alpha = self.alphas[t_int.cpu()]
+        return alpha
+
+    def snr(self, t):
+        alphat = self.alpha(t)
+        return torch.sqrt(alphat) / torch.sqrt(1 - alphat + 1e-7)
+
     def weight(self, t):
-        t = t - self.dt
-        weight = (1 - t).reshape(-1, 1)
-        # t = t.reshape(-1, 1)
-        # weight = (1 - VPSDE().marginal_prob(t, t)[1] ** 2).reshape(-1, 1)
+        weight = self.snr(t).reshape(-1, 1).to(t.device)
+        if self.weight_scale == 0.:
+            return torch.zeros_like(weight)
+
         weight = self.weight_scale * weight
-
-        # weight = torch.where(t > 0.8, weight * 0., weight).reshape(-1, 1)
-
-        return weight * self.num_steps
+      
+        return weight / (self.dt ** 2)
 
     def running_state_cost(self, t, x, u):
         weight = self.weight(t).squeeze() # shape: (1, 1)
         x = x.reshape(-1, *self.shape)
         cost = self.state_cost(x, self.target)
-        return weight * cost
+        return weight * cost * 10.0
 
     def running_control_cost(self, t, x, u):
         weight = self.weight(t) # shape: (1, 1)
@@ -127,10 +135,10 @@ class DDPMDiffusion(Diffusion):
     def step(self, t, x, u):
         t_int = self.discretize_time(t - self.dt)
 
-        if self.control_type == 'pixel':
+        if self.control_type == 'input':
             assert x.shape == u.shape, f"x.shape: {x.shape}, u.shape: {u.shape}"
             return self.step_fn((x + u).reshape(-1, *self.shape), t_int).reshape(-1, self.ndims)
-        elif self.control_type == 'pixel_after':
+        elif self.control_type == 'output':
             assert x.shape == u.shape, f"x.shape: {x.shape}, u.shape: {u.shape}"
             return self.step_fn(x.reshape(-1, *self.shape), t_int).reshape(-1, self.ndims) + u
         elif self.control_type == 'h':
@@ -164,7 +172,7 @@ class HFDiffusion(DDPMDiffusion):
 
     def denoise(self, t, x, u=None):
         shape = (-1,) + self.shape
-        if self.control_type == 'pixel' or self.control_type == 'pixel_after':
+        if self.control_type == 'input' or self.control_type == 'output':
             if u is None:
                 u = torch.zeros_like(x)
             assert x.shape == u.shape
@@ -187,7 +195,6 @@ class DPSDiffusion(DDPMDiffusion):
         *args,
         **kwargs,
     ):
-        #self.h_dim = model.h_dim
         super().__init__(*args, **kwargs)
         self.sampler = sampler
         self.model = model
@@ -203,7 +210,7 @@ class DPSDiffusion(DDPMDiffusion):
 
         denoise_fn = lambda x, u=None: self.sampler.p_sample(x=x.reshape(shape), t=t_int, u=u, model=self.model)['pred_xstart'].reshape(-1, self.ndims)
 
-        if self.control_type == 'pixel' or self.control_type == 'pixel_after':
+        if self.control_type == 'input' or self.control_type == 'output':
             if u is None:
                 u = torch.zeros_like(x)
             assert x.shape == u.shape

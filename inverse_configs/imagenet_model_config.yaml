@@ -16,5 +16,7 @@ dropout: 0.0
 resblock_updown: True
 use_fp16: False
 use_new_attention_order: False
+shape: (3, 256, 256)
 
-model_path: models/imagenet256.pt
+model_dir: models/
+model_name: imagenet256.pt

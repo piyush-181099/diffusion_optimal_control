@@ -7,10 +7,10 @@ import sys
 import gc
 
 class DDP:
-    def __init__(self, env, k_jacobian=1, k_hessian=1, lr_mode='k', rrf_iters=2,
-                 eps=1e-7, success_multiplier=.5, failure_multiplier=10., min_eps=1e-8, 
-                 chunk_size=128, verbose=1, print_every=10, use_running_state_cost=False,
-                 lr_identity=True, debugging_mode=False, seed=None):
+    def __init__(self, env, k_jacobian=0, k_hessian=0, lr_mode='k', rrf_iters=2,
+                 eps=1e-3, success_multiplier=1., failure_multiplier=10., min_eps=1e-8, 
+                 chunk_size=8, verbose=1, print_every=10, use_running_state_cost=False,
+                 lr_identity=False, debugging_mode=False, seed=None):
 
         """
         Class initializer.
@@ -85,7 +85,6 @@ class DDP:
             print(f"||u_init|| = {actions.norm(dim=1).mean():.3e}, is the norm of the entire control trajectory")
         
         time0 = time.time()
-        self.num_iterations = num_iterations
         try:
             for iter_num in range(num_iterations):
                 if self.seed is not None:
@@ -96,7 +95,6 @@ class DDP:
                                                iter_num=iter_num, states=states,
                                                last=iter_num == (num_iterations - 1))
                 end_states.append(states[-1].cpu())
-                # print("time per iteration per sample", (time.time() - time0) / len(init_state) / (iter_num + 1))
         except KeyboardInterrupt as e:
             pass
 

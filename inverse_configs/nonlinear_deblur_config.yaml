@@ -1,11 +1,9 @@
-conditioning:
-  method: ps
-  params:
-    scale: 0.3
+parameters:
+  weight_scale: 1e-6
+  lr: 1e-2
 
 data:
-  name: ffhq
-  root: ./data/samples/
+  root: data/samples/
 
 measurement:
   operator:

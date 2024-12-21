@@ -32,7 +32,7 @@ for i, ref_img in enumerate(experiment.loader):
     metrics = experiment.compute_metrics(ref_img, sample, states)
 
     lpips.append(metrics['lpips'])
-    print(f"lpips: {metrics['lpips'].squeeze()}, {torch.stack(lpips).mean().item()}")
+    print(f"LPIPS - Cur: {metrics['lpips'].squeeze()}, Avg: {torch.stack(lpips).mean().item()}")
 
     plt.plot(metrics['lpips_over_iterations'].detach().cpu())
     plt.savefig(os.path.join(experiment.outdir, 'average_lpips_over_iterations.png'))

@@ -54,8 +54,8 @@ def parse_args():
     parser.add_argument('--num_steps', help='Number of steps of the diffusion process', type=int, default=20)
     parser.add_argument('--seed', help='Random seed, set to -1 if no seed', type=int, default=42)
     parser.add_argument('--outdir', help='Output directory', default='out/', type=str)
-    parser.add_argument('--data_root', help='Root directory for data', default='', type=str)
-    parser.add_argument('--model_root', help='Root directory for model weights', default='', type=str)
+    parser.add_argument('--data_root', help='Root directory for data', default='./data', type=str)
+    parser.add_argument('--model_root', help='Root directory for model weights', default='./models', type=str)
     
     args = parser.parse_args()
     return args
@@ -128,9 +128,9 @@ class Experiment:
         task_config = load_yaml(f'inverse_configs/{args.task}_config.yaml')
         
         data_config = task_config['data']
-        if args.data_root:
-            data_config['root'] = os.path.join(args.data_root, args.dataset)
         data_config['name'] = args.dataset
+        if args.data_root:
+            data_config['root'] = args.data_root
         
         model_config = load_yaml(f'inverse_configs/{args.dataset}_model_config.yaml')
         if args.model_root:

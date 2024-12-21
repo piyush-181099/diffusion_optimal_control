@@ -4,7 +4,6 @@ from typing import Callable, Optional
 from torch.utils.data import DataLoader
 from torchvision.datasets import VisionDataset, CIFAR10
 
-
 __DATASET__ = {}
 
 def register_dataset(name: str):
@@ -41,17 +40,9 @@ def get_dataloader(dataset: VisionDataset,
 class FFHQDataset(VisionDataset):
     def __init__(self, root: str, transforms: Optional[Callable]=None):
         super().__init__(root, transforms)
+        fpaths = sorted(glob(root + '/*.jpg', recursive=True) + glob(root + '/*.png', recursive=True))
+        self.fpaths = fpaths
         
-        fpaths = sorted(glob(root + '/**/*.png', recursive=True) + glob(root + '/**/*.jpg', recursive=True))
-        if 'ffhq' in root:
-            self.fpaths = []
-            for fpath in fpaths:
-                fnum = int(fpath.split('/')[-1].split('.')[0])
-                if fnum >= 69000:
-                    self.fpaths.append(fpath)
-        else:
-            self.fpaths = fpaths
-            
         assert len(self.fpaths) > 0, "File list is empty. Check the root."
 
     def __len__(self):

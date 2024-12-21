@@ -62,15 +62,10 @@ class MFDDP(DDP):
             new_states.append(cur_state)
 
         running_cost, terminal_cost = self.get_cost(new_states, actions)
-        
-        if last or (self.verbose == 1 and (iter_num + 1) % self.print_every == 0):
-            print(
-                f"iter: {iter_num + 1}, norm: {actions.norm().item():2.2e}, total_cost: {(running_cost + terminal_cost).item():2.4e}",
-                f"running: {running_cost.item():2.4e}, terminal: {terminal_cost.item():2.4e}",
-                 )
-        
-        sys.stdout.flush() # this will flush out the print buffers and write to output files
-                
+
+        if self.pbar is not None:
+            self.pbar.set_postfix(cost=(running_cost + terminal_cost).item())
+                        
         return torch.stack(new_states), actions
     
     def offdiag_inverse(self, A_scalar, U, C, V, mode='matrix', v=None, eps=0.):

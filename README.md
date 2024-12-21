@@ -29,8 +29,6 @@ conda create -n DPS python=3.8
 conda activate DPS
 
 pip install -r requirements.txt
-
-pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --extra-index-url https://download.pytorch.org/whl/cu113
 ```
 
 <br />
@@ -39,8 +37,8 @@ pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --e
 
 ```
 python3 inverse_sampling.py \
---dataset='ffhq' \
---algorithm='ddp'
+--dataset=ffhq \
+--task=super_resolution
 ```
 
 ## Contact

@@ -24,10 +24,6 @@ From the [link](https://drive.google.com/drive/folders/1jElnRoFv7b31fG0v6pTSQkel
 Install dependencies
 
 ```
-conda create -n DPS python=3.8
-
-conda activate DPS
-
 pip install -r requirements.txt
 ```
 

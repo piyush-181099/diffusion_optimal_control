@@ -38,13 +38,54 @@ def get_state_cost(operator, shape):
     return state_cost
 
 def process(x):
+    """Convert tensors or arrays in ``[-1, 1]`` to uint8 images.
+
+    This helper originally only supported 3\-channel image tensors shaped as
+    ``(C, H, W)``.  Some operators in this repository return one or two
+    dimensional tensors (e.g. vectors from circuit simulations) so we extend
+    the function to gracefully handle those cases.
+
+    Parameters
+    ----------
+    x : ``torch.Tensor`` or ``np.ndarray``
+        The data to convert. Values are expected to be in ``[-1, 1]``.
+
+    Returns
+    -------
+    np.ndarray
+        ``uint8`` image suitable for ``PIL.Image.fromarray``.
+    """
+
     if isinstance(x, torch.Tensor):
         x = x.detach().cpu().numpy()
     else:
         assert isinstance(x, np.ndarray)
+
     x = x.clip(-1, 1)
-    x = x.transpose(1, 2, 0)
-    return ((x + 1) * 127.5).astype(np.uint8)
+
+    if x.ndim == 1:
+        # Vector input: reshape (or pad) into a square grayscale image
+        size = int(np.ceil(np.sqrt(x.size)))
+        pad = size * size - x.size
+        if pad > 0:
+            x = np.pad(x, (0, pad))
+        x = x.reshape(size, size)
+        return ((x + 1) * 127.5).astype(np.uint8)
+
+    if x.ndim == 2:
+        # Already a single channel image
+        return ((x + 1) * 127.5).astype(np.uint8)
+
+    if x.ndim == 3:
+        if x.shape[0] == 3:
+            # Standard (C, H, W) RGB image
+            x = x.transpose(1, 2, 0)
+        else:
+            # Other 3D tensors - treat the first channel as grayscale
+            x = x[0]
+        return ((x + 1) * 127.5).astype(np.uint8)
+
+    raise ValueError(f"Unsupported input shape {x.shape}")
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Compute DDP on MNIST.')

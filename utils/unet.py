@@ -25,8 +25,8 @@ NUM_CLASSES = 1000
 
 def create_model(
     image_size,
-    num_channels,
-    num_res_blocks,
+    num_channels=None,
+    num_res_blocks=None,
     channel_mult="",
     learn_sigma=False,
     class_cond=False,
@@ -59,7 +59,10 @@ def create_model(
             model.load_state_dict(state)
         except Exception as e:
             print(f"Got exception: {e} / Randomly initialize")
+
         return model
+
+    assert num_channels is not None and num_res_blocks is not None
 
     if channel_mult == "":
         if image_size == 512:

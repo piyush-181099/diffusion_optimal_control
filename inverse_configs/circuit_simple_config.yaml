@@ -1,0 +1,13 @@
+parameters:
+  weight_scale: 1e-6
+  lr: 5e-3
+
+data:
+  root: data/circuit/
+
+measurement:
+  operator:
+    name: circuit_simple
+  noise:
+    name: gaussian
+    sigma: 0.05

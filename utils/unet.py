@@ -18,6 +18,7 @@ from .nn import (
     normalization,
     timestep_embedding,
 )
+from diffusers import UNet2DModel
 
 
 NUM_CLASSES = 1000
@@ -42,6 +43,24 @@ def create_model(
     model_path='',
     **kwargs,
 ):
+    if 'block_out_channels' in kwargs:
+        model = UNet2DModel(
+            sample_size=image_size,
+            in_channels=kwargs.get('in_channels', 3),
+            out_channels=kwargs.get('out_channels', 3),
+            layers_per_block=kwargs.get('layers_per_block', 2),
+            block_out_channels=kwargs['block_out_channels'],
+            down_block_types=kwargs['down_block_types'],
+            up_block_types=kwargs['up_block_types'],
+        )
+
+        try:
+            state = th.load(model_path, map_location='cpu')
+            model.load_state_dict(state)
+        except Exception as e:
+            print(f"Got exception: {e} / Randomly initialize")
+        return model
+
     if channel_mult == "":
         if image_size == 512:
             channel_mult = (0.5, 1, 1, 2, 2, 4, 4)

@@ -49,7 +49,7 @@ def process(x):
 def parse_args():
     parser = argparse.ArgumentParser(description='Compute DDP on MNIST.')
     parser.add_argument('--task', help='Task to benchmark: box_inpainting / random_inpainting / motion_deblur / gaussian_deblur / super_resolution / phase_retrieval', default='super_resolution', type=str)
-    parser.add_argument('--dataset', help='Dataset: ffhq / imagenet', default='ffhq', type=str)
+    parser.add_argument('--dataset', help='Dataset: ffhq / imagenet / circuit', default='ffhq', type=str)
     parser.add_argument('--num_iters', help='Number of DDP iterations', default=50, type=int)
     parser.add_argument('--num_steps', help='Number of steps of the diffusion process', type=int, default=20)
     parser.add_argument('--seed', help='Random seed, set to -1 if no seed', type=int, default=42)

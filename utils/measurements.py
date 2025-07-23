@@ -199,6 +199,30 @@ class NonlinearBlurOperator(NonLinearOperator):
         blurred = (blurred * 2.0 - 1.0).clamp(-1, 1) #[0, 1] -> [-1, 1]
         return blurred
 
+
+@register_operator(name='circuit_simple')
+class CircuitSimpleOperator(NonLinearOperator):
+    def __init__(self, device):
+        self.device = device
+        self.M = torch.randn(100, 16384).to(device)
+
+    def forward(self, x, *args, **kwargs):
+        img = (x + 1.0) / 2.0
+        grayscale = 0.299 * img[:, 0] + 0.587 * img[:, 1] + 0.114 * img[:, 2]
+        sigma = 1.0 + 19999.0 * grayscale
+        x_vec = sigma.flatten(1)
+        return x_vec @ self.M.t()
+
+    def grad(self, difference, norm, x_prev):
+        J = self.M
+        diff_unit = difference / norm
+        grad_gray = (-0.5 * 19999.0 * (J.T @ diff_unit)).view(128, 128)
+        grad_rgb = torch.zeros_like(x_prev[0])
+        grad_rgb[0] = grad_gray * 0.299
+        grad_rgb[1] = grad_gray * 0.587
+        grad_rgb[2] = grad_gray * 0.114
+        return grad_rgb.unsqueeze(0)
+
 # =============
 # Noise classes
 # =============

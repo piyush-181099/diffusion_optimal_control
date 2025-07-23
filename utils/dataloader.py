@@ -1,3 +1,4 @@
+import os
 from glob import glob
 from PIL import Image
 from typing import Callable, Optional
@@ -56,7 +57,7 @@ class FFHQDataset(VisionDataset):
             img = self.transforms(img)
         
         return img
-    
+
 @register_dataset(name='cifar')
 class CIFARDataset(VisionDataset):
     def __init__(self, root: str, transforms: Optional[Callable]=None):
@@ -74,3 +75,18 @@ class CIFARDataset(VisionDataset):
             img = self.transforms(img)
         
         return img
+
+@register_dataset(name='circuit')
+class CircuitDataset(VisionDataset):
+    def __init__(self, root: str, transforms: Optional[Callable] = None):
+        super().__init__(root, transforms)
+        self.fpaths = sorted(glob(os.path.join(root, '*.jpg')) +
+                             glob(os.path.join(root, '*.png')))
+        assert len(self.fpaths) > 0, "Dataset folder is empty."
+
+    def __len__(self):
+        return len(self.fpaths)
+
+    def __getitem__(self, index: int):
+        img = Image.open(self.fpaths[index]).convert('RGB')
+        return self.transforms(img) if self.transforms else img

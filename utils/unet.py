@@ -21,6 +21,29 @@ from .nn import (
 from diffusers import UNet2DModel
 
 
+class _UNet2DWrapper(nn.Module):
+    """Wrap diffusers UNet2DModel so it accepts ``u`` like our UNetModel."""
+
+    def __init__(self, model: UNet2DModel):
+        super().__init__()
+        self.model = model
+
+    def forward(self, x, timesteps, y=None, u=None):
+        if u is not None:
+            assert u.shape == x.shape, (
+                f"u.shape {u.shape} must match x.shape {x.shape}"
+            )
+            x = x + u
+
+        out = self.model(x, timesteps)
+        # diffusers models return either a dict or a dataclass with `sample`
+        if isinstance(out, dict):
+            return out["sample"]
+        if hasattr(out, "sample"):
+            return out.sample
+        return out
+
+
 NUM_CLASSES = 1000
 
 def create_model(
@@ -44,7 +67,7 @@ def create_model(
     **kwargs,
 ):
     if 'block_out_channels' in kwargs:
-        model = UNet2DModel(
+        unet = UNet2DModel(
             sample_size=image_size,
             in_channels=kwargs.get('in_channels', 3),
             out_channels=kwargs.get('out_channels', 3),
@@ -56,9 +79,11 @@ def create_model(
 
         try:
             state = th.load(model_path, map_location='cpu')
-            model.load_state_dict(state)
+            unet.load_state_dict(state)
         except Exception as e:
             print(f"Got exception: {e} / Randomly initialize")
+
+        model = _UNet2DWrapper(unet)
         return model
 
     if channel_mult == "":
